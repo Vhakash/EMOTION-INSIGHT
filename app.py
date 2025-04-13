@@ -15,6 +15,14 @@ from visualization import (
     create_aspect_sentiment_chart
 )
 from utils import get_sample_texts
+from database import (
+    save_analysis,
+    get_all_analyses,
+    get_analysis_by_id,
+    delete_analysis,
+    get_sentiment_distribution,
+    get_sentiment_history_dataframe
+)
 
 # Configure the page
 st.set_page_config(
@@ -23,9 +31,18 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state for history
+# Initialize session state
 if 'history' not in st.session_state:
     st.session_state.history = []
+    
+# Load history from database when the app starts
+if 'db_initialized' not in st.session_state:
+    try:
+        st.session_state.history = get_all_analyses()
+        st.session_state.db_initialized = True
+    except Exception as e:
+        st.error(f"Error loading data from database: {str(e)}")
+        st.session_state.db_initialized = False
 
 def analyze_text(text):
     """Analyze the given text and return the results"""
@@ -38,7 +55,7 @@ def analyze_text(text):
     # Aspect based sentiment analysis
     aspect_result = perform_aspect_based_analysis(text)
     
-    # Add to history
+    # Create result dictionary
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     analysis_result = {
         "timestamp": timestamp,
@@ -48,7 +65,15 @@ def analyze_text(text):
         "aspects": aspect_result
     }
     
-    st.session_state.history.append(analysis_result)
+    # Save to database
+    try:
+        analysis_id = save_analysis(analysis_result)
+        # If successful, reload all analyses from the database
+        st.session_state.history = get_all_analyses()
+    except Exception as e:
+        st.error(f"Error saving to database: {str(e)}")
+        # Add to session state history as fallback
+        st.session_state.history.append(analysis_result)
     
     return analysis_result
 
@@ -79,7 +104,7 @@ st.title("Sentiment Analysis Dashboard")
 st.markdown("Analyze the emotional content of your text using advanced NLP techniques")
 
 # Main content area
-tab1, tab2, tab3 = st.tabs(["Text Analysis", "Batch Analysis", "History"])
+tab1, tab2, tab3, tab4 = st.tabs(["Text Analysis", "Batch Analysis", "History", "Analytics"])
 
 with tab1:
     col1, col2 = st.columns([3, 1])
@@ -202,8 +227,9 @@ with tab3:
     else:
         # Create a dataframe from history
         history_data = []
-        for item in st.session_state.history:
+        for i, item in enumerate(st.session_state.history):
             history_data.append({
+                "ID": item.get("id", i),
                 "Timestamp": item["timestamp"],
                 "Text": item["text"][:50] + "..." if len(item["text"]) > 50 else item["text"],
                 "Sentiment": item["sentiment"]["classification"],
@@ -211,9 +237,70 @@ with tab3:
             })
         
         history_df = pd.DataFrame(history_data)
+        
+        # Add management tools
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            selected_entry = st.selectbox("Select an entry to view details:", 
+                                          range(len(history_df)), 
+                                          format_func=lambda i: f"{history_df.iloc[i]['Timestamp']} - {history_df.iloc[i]['Text']}")
+        
+        with col2:
+            if st.button("Delete Selected Entry", key="delete_entry"):
+                try:
+                    entry_id = history_df.iloc[selected_entry]["ID"]
+                    if delete_analysis(entry_id):
+                        st.success(f"Successfully deleted analysis #{entry_id}")
+                        # Reload history from database
+                        st.session_state.history = get_all_analyses()
+                        st.rerun()
+                    else:
+                        st.warning(f"Entry #{entry_id} not found in database.")
+                except Exception as e:
+                    st.error(f"Error deleting entry: {str(e)}")
+        
+        # Display the dataframe
         st.dataframe(history_df, use_container_width=True)
         
-        # Visualization of history
+        # Show details of selected entry
+        if st.session_state.history:
+            selected_item = st.session_state.history[selected_entry]
+            
+            st.subheader(f"Details for Analysis from {selected_item['timestamp']}")
+            
+            # Display text
+            st.markdown("### Text")
+            st.text_area("Analyzed Text", value=selected_item["text"], height=100, disabled=True)
+            
+            # Create expandable sections for results
+            with st.expander("Sentiment Analysis Results", expanded=True):
+                # Create columns for displaying detailed results
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Overall sentiment
+                    st.markdown("#### Overall Sentiment")
+                    create_sentiment_gauge(selected_item["sentiment"]["compound"])
+                    st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
+                    st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
+                
+                with col2:
+                    # Emotion analysis
+                    st.markdown("#### Detected Emotions")
+                    create_emotion_bar_chart(selected_item["emotions"])
+            
+            # Aspect-based analysis
+            if selected_item["aspects"]:
+                with st.expander("Aspect-Based Analysis", expanded=True):
+                    st.markdown("#### Aspect-Based Sentiment")
+                    create_aspect_sentiment_chart(selected_item["aspects"])
+                    
+                    # Display aspects in a table
+                    aspects_df = pd.DataFrame(selected_item["aspects"])
+                    st.dataframe(aspects_df)
+        
+        # Visualization of history trend
         if len(history_df) > 1:
             st.subheader("Sentiment Trend")
             
@@ -234,9 +321,253 @@ with tab3:
             
             st.plotly_chart(fig, use_container_width=True)
             
-        if st.button("Clear History"):
-            st.session_state.history = []
-            st.rerun()
+        # Add option to download full history as CSV
+        if len(history_df) > 0:
+            csv = history_df.to_csv(index=False)
+            st.download_button(
+                label="Download History as CSV",
+                data=csv,
+                file_name="sentiment_analysis_history.csv",
+                mime="text/csv",
+            )
+            
+        # Clear history button
+        if st.button("Clear All History"):
+            try:
+                # Clear history from database
+                deleted_count = delete_all_analyses()
+                st.session_state.history = []
+                st.success(f"Successfully cleared {deleted_count} analysis records from database.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error clearing history from database: {str(e)}")
+                # Still clear from session state
+                st.session_state.history = []
+                st.rerun()
+
+with tab4:
+    st.subheader("Sentiment Analytics Dashboard")
+    
+    if not st.session_state.history:
+        st.info("No analysis data available. Analyze some text to view analytics.")
+    else:
+        # Create a dataframe from history for analysis
+        analytics_data = []
+        emotions_data = []
+        aspects_data = []
+        
+        for item in st.session_state.history:
+            # Basic sentiment data
+            analytics_data.append({
+                "Timestamp": item["timestamp"],
+                "Sentiment": item["sentiment"]["classification"],
+                "Score": item["sentiment"]["compound"],
+                "Positive": item["sentiment"]["positive"],
+                "Negative": item["sentiment"]["negative"],
+                "Neutral": item["sentiment"]["neutral"],
+                "Subjectivity": item["sentiment"]["subjectivity"],
+                "Confidence": item["sentiment"]["confidence"]
+            })
+            
+            # Collect emotions data
+            for emotion, score in item["emotions"].items():
+                emotions_data.append({
+                    "Timestamp": item["timestamp"],
+                    "Emotion": emotion,
+                    "Score": score
+                })
+            
+            # Collect aspect data
+            for aspect in item["aspects"]:
+                aspects_data.append({
+                    "Timestamp": item["timestamp"],
+                    "Aspect": aspect["aspect"],
+                    "Sentiment": aspect["sentiment"],
+                    "Score": aspect["score"]
+                })
+        
+        analytics_df = pd.DataFrame(analytics_data)
+        emotions_df = pd.DataFrame(emotions_data)
+        aspects_df = pd.DataFrame(aspects_data)
+        
+        # Overall sentiment distribution
+        st.subheader("Sentiment Distribution")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Sentiment classification pie chart
+            sentiment_counts = analytics_df["Sentiment"].value_counts().reset_index()
+            sentiment_counts.columns = ["Sentiment", "Count"]
+            
+            fig = px.pie(
+                sentiment_counts,
+                values="Count",
+                names="Sentiment",
+                color="Sentiment",
+                color_discrete_map={
+                    "Positive": "#38B2AC",
+                    "Neutral": "#718096",
+                    "Negative": "#FF6B6B"
+                },
+                title="Sentiment Distribution"
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Sentiment score histogram
+            fig = px.histogram(
+                analytics_df,
+                x="Score",
+                nbins=20,
+                color_discrete_sequence=["#5B61F9"],
+                title="Sentiment Score Distribution"
+            )
+            
+            fig.update_layout(
+                xaxis_title="Sentiment Score (-1 to 1)",
+                yaxis_title="Frequency",
+                xaxis_range=[-1, 1]
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Emotion analysis
+        if len(emotions_df) > 0:
+            st.subheader("Emotion Analysis")
+            
+            # Aggregate emotions
+            emotion_avg = emotions_df.groupby("Emotion")["Score"].mean().reset_index()
+            emotion_avg = emotion_avg.sort_values("Score", ascending=False)
+            
+            fig = px.bar(
+                emotion_avg,
+                x="Emotion",
+                y="Score",
+                color="Emotion",
+                title="Average Emotion Intensity"
+            )
+            
+            fig.update_layout(
+                xaxis_title="Emotion",
+                yaxis_title="Average Intensity",
+                yaxis_range=[0, 1]
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Aspect analysis
+        if len(aspects_df) > 0:
+            st.subheader("Aspect Analysis")
+            
+            # Get the top aspects by frequency
+            top_aspects = aspects_df["Aspect"].value_counts().nlargest(10).reset_index()
+            top_aspects.columns = ["Aspect", "Frequency"]
+            
+            # Calculate average sentiment for each aspect
+            aspect_sentiment = aspects_df.groupby("Aspect")["Score"].mean().reset_index()
+            aspect_sentiment = aspect_sentiment.rename(columns={"Score": "Avg_Sentiment"})
+            
+            # Merge to get top aspects with their average sentiment
+            top_aspects_with_sentiment = top_aspects.merge(aspect_sentiment, on="Aspect")
+            
+            # Sort by frequency
+            top_aspects_with_sentiment = top_aspects_with_sentiment.sort_values("Frequency", ascending=False)
+            
+            # Create a double-axis chart
+            fig = go.Figure()
+            
+            # Add bars for frequency
+            fig.add_trace(go.Bar(
+                x=top_aspects_with_sentiment["Aspect"],
+                y=top_aspects_with_sentiment["Frequency"],
+                name="Frequency",
+                marker_color="#5B61F9"
+            ))
+            
+            # Add line for sentiment
+            fig.add_trace(go.Scatter(
+                x=top_aspects_with_sentiment["Aspect"],
+                y=top_aspects_with_sentiment["Avg_Sentiment"],
+                name="Average Sentiment",
+                marker_color="#FF6B6B",
+                yaxis="y2"
+            ))
+            
+            # Set up layout with dual y-axes
+            fig.update_layout(
+                title="Top Aspects by Frequency and Their Average Sentiment",
+                yaxis=dict(title="Frequency"),
+                yaxis2=dict(
+                    title="Avg Sentiment",
+                    overlaying="y",
+                    side="right",
+                    range=[-1, 1]
+                ),
+                xaxis_title="Aspect",
+                legend=dict(x=0.01, y=0.99),
+                margin=dict(l=50, r=50, t=50, b=50)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Show aspects by sentiment
+            st.subheader("Aspects by Sentiment")
+            
+            # Group aspects by sentiment
+            aspect_sentiment_class = aspects_df.groupby(["Aspect", "Sentiment"]).size().reset_index(name="Count")
+            
+            # Get top aspects
+            top_aspects_list = top_aspects["Aspect"].tolist()[:8]  # Limit to top 8 for clarity
+            filtered_aspects = aspect_sentiment_class[aspect_sentiment_class["Aspect"].isin(top_aspects_list)]
+            
+            # Create a grouped bar chart
+            fig = px.bar(
+                filtered_aspects,
+                x="Aspect",
+                y="Count",
+                color="Sentiment",
+                title="Sentiment Analysis by Aspect",
+                color_discrete_map={
+                    "Positive": "#38B2AC",
+                    "Neutral": "#718096",
+                    "Negative": "#FF6B6B"
+                }
+            )
+            
+            fig.update_layout(
+                xaxis_title="Aspect",
+                yaxis_title="Count"
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Subjectivity Analysis
+        st.subheader("Subjectivity Analysis")
+        
+        fig = px.scatter(
+            analytics_df,
+            x="Score",
+            y="Subjectivity",
+            color="Sentiment",
+            color_discrete_map={
+                "Positive": "#38B2AC",
+                "Neutral": "#718096",
+                "Negative": "#FF6B6B"
+            },
+            title="Sentiment vs. Subjectivity",
+            hover_data=["Timestamp"]
+        )
+        
+        fig.update_layout(
+            xaxis_title="Sentiment Score (-1 to 1)",
+            yaxis_title="Subjectivity (0-1)",
+            xaxis_range=[-1, 1],
+            yaxis_range=[0, 1]
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
 
 # Footer with information
 st.markdown("---")
