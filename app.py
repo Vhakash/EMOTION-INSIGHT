@@ -230,12 +230,22 @@ with tab3:
         # Create a dataframe from history
         history_data = []
         for i, item in enumerate(st.session_state.history):
+            # Handle different data formats (database vs direct analysis)
+            if "sentiment" in item:
+                # Direct analysis format
+                sentiment = item["sentiment"]["classification"]
+                score = item["sentiment"]["compound"]
+            else:
+                # Database format
+                sentiment = item["sentiment_classification"]
+                score = item["sentiment_score"]
+                
             history_data.append({
                 "ID": item.get("id", i),
                 "Timestamp": item["timestamp"],
                 "Text": item["text"][:50] + "..." if len(item["text"]) > 50 else item["text"],
-                "Sentiment": item["sentiment"]["classification"],
-                "Score": item["sentiment"]["compound"]
+                "Sentiment": sentiment,
+                "Score": score
             })
         
         history_df = pd.DataFrame(history_data)
@@ -283,9 +293,17 @@ with tab3:
                 with col1:
                     # Overall sentiment
                     st.markdown("#### Overall Sentiment")
-                    create_sentiment_gauge(selected_item["sentiment"]["compound"])
-                    st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
-                    st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
+                    # Handle different formats
+                    if "sentiment" in selected_item:
+                        # Direct analysis format
+                        create_sentiment_gauge(selected_item["sentiment"]["compound"])
+                        st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
+                        st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
+                    else:
+                        # Database format
+                        create_sentiment_gauge(selected_item["sentiment_score"])
+                        st.markdown(f"**Classification**: {selected_item['sentiment_classification']}")
+                        st.markdown(f"**Confidence**: {selected_item['confidence']:.2f}")
                 
                 with col2:
                     # Emotion analysis
@@ -359,34 +377,60 @@ with tab4:
         aspects_data = []
         
         for item in st.session_state.history:
-            # Basic sentiment data
-            analytics_data.append({
-                "Timestamp": item["timestamp"],
-                "Sentiment": item["sentiment"]["classification"],
-                "Score": item["sentiment"]["compound"],
-                "Positive": item["sentiment"]["positive"],
-                "Negative": item["sentiment"]["negative"],
-                "Neutral": item["sentiment"]["neutral"],
-                "Subjectivity": item["sentiment"]["subjectivity"],
-                "Confidence": item["sentiment"]["confidence"]
-            })
-            
-            # Collect emotions data
-            for emotion, score in item["emotions"].items():
-                emotions_data.append({
+            # Handle different data formats
+            if "sentiment" in item:
+                # Direct analysis format
+                analytics_data.append({
                     "Timestamp": item["timestamp"],
-                    "Emotion": emotion,
-                    "Score": score
+                    "Sentiment": item["sentiment"]["classification"],
+                    "Score": item["sentiment"]["compound"],
+                    "Positive": item["sentiment"]["positive"],
+                    "Negative": item["sentiment"]["negative"],
+                    "Neutral": item["sentiment"]["neutral"],
+                    "Subjectivity": item["sentiment"]["subjectivity"],
+                    "Confidence": item["sentiment"]["confidence"]
+                })
+            else:
+                # Database format (limited analytics data available)
+                analytics_data.append({
+                    "Timestamp": item["timestamp"],
+                    "Sentiment": item["sentiment_classification"],
+                    "Score": item["sentiment_score"],
+                    "Positive": 0.0,  # Default value
+                    "Negative": 0.0,  # Default value
+                    "Neutral": 0.0,   # Default value
+                    "Subjectivity": 0.5,  # Default value
+                    "Confidence": item["confidence"]
                 })
             
-            # Collect aspect data
-            for aspect in item["aspects"]:
-                aspects_data.append({
-                    "Timestamp": item["timestamp"],
-                    "Aspect": aspect["aspect"],
-                    "Sentiment": aspect["sentiment"],
-                    "Score": aspect["score"]
-                })
+            # Collect emotions data (safely handle both formats)
+            if item["emotions"]:
+                for emotion, score in item["emotions"].items():
+                    emotions_data.append({
+                        "Timestamp": item["timestamp"],
+                        "Emotion": emotion,
+                        "Score": score
+                    })
+            
+            # Collect aspect data (safely handle both formats)
+            if item["aspects"]:
+                for aspect in item["aspects"]:
+                    # Handle the case where aspect might be a string or dict
+                    if isinstance(aspect, dict):
+                        aspects_data.append({
+                            "Timestamp": item["timestamp"],
+                            "Aspect": aspect["aspect"],
+                            "Sentiment": aspect["sentiment"],
+                            "Score": aspect["score"]
+                        })
+                    elif isinstance(aspect, str):
+                        # Simple default for string-only aspect
+                        aspects_data.append({
+                            "Timestamp": item["timestamp"],
+                            "Aspect": aspect,
+                            "Sentiment": "Neutral",
+                            "Score": 0.0
+                        })
         
         analytics_df = pd.DataFrame(analytics_data)
         emotions_df = pd.DataFrame(emotions_data)
