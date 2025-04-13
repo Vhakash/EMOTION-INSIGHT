@@ -210,7 +210,7 @@ with tab2:
                         },
                         title='Sentiment Distribution'
                     )
-                    st.plotly_chart(fig)
+                    st.plotly_chart(fig, key="csv_sentiment_pie")
                     
                     # Prepare CSV for download
                     csv = results_df.to_csv(index=False)
@@ -314,7 +314,7 @@ with tab3:
             if selected_item["aspects"]:
                 with st.expander("Aspect-Based Analysis", expanded=True):
                     st.markdown("#### Aspect-Based Sentiment")
-                    create_aspect_sentiment_chart(selected_item["aspects"])
+                    create_aspect_sentiment_chart(selected_item["aspects"], key=f"history_{selected_entry}_aspects")
                     
                     # Display aspects in a table
                     aspects_df = pd.DataFrame(selected_item["aspects"])
