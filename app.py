@@ -26,6 +26,28 @@ from database import (
     get_sentiment_history_dataframe
 )
 
+# Helper function for Plotly charts to prevent duplicate keys
+def safe_plotly_chart(fig, container_width=True, key=None):
+    """
+    Display a Plotly chart with a guaranteed unique key to prevent duplicate element IDs.
+    
+    Parameters:
+    fig : plotly.graph_objs._figure.Figure
+        The Plotly figure to display
+    container_width : bool, default=True
+        If True, the chart will use the full width of the container
+    key : str, optional
+        A unique key for the chart element. If not provided, a random key will be generated.
+    """
+    import random
+    import string
+    
+    if key is None:
+        # Generate a random string if no key is provided
+        key = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        
+    st.plotly_chart(fig, use_container_width=container_width, key=key)
+
 # Configure the page
 st.set_page_config(
     page_title="Sentiment Analysis Dashboard",
@@ -339,7 +361,7 @@ with tab3:
                 yaxis_range=[-1, 1]
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
             
         # Add option to download full history as CSV
         if len(history_df) > 0:
@@ -459,7 +481,7 @@ with tab4:
                 title="Sentiment Distribution"
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
         
         with col2:
             # Sentiment score histogram
@@ -477,7 +499,7 @@ with tab4:
                 xaxis_range=[-1, 1]
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
         
         # Emotion analysis
         if len(emotions_df) > 0:
@@ -501,7 +523,7 @@ with tab4:
                 yaxis_range=[0, 1]
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
         
         # Aspect analysis
         if len(aspects_df) > 0:
@@ -556,7 +578,7 @@ with tab4:
                 margin=dict(l=50, r=50, t=50, b=50)
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
             
             # Show aspects by sentiment
             st.subheader("Aspects by Sentiment")
@@ -587,7 +609,7 @@ with tab4:
                 yaxis_title="Count"
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plotly_chart(fig)
         
         # Subjectivity Analysis
         st.subheader("Subjectivity Analysis")
@@ -613,7 +635,7 @@ with tab4:
             yaxis_range=[0, 1]
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        safe_plotly_chart(fig)
 
 # Footer with information
 st.markdown("---")
