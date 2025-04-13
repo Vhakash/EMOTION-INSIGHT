@@ -1,0 +1,29 @@
+textblob.exceptions.MissingCorpusError: Looks like you are missing some required data for this feature. To download the necessary data, simply run python -m textblob.download_corpora or use the NLTK downloader to download the missing data: http://nltk.org/data.html If this doesn't fix the problem, file an issue at https://github.com/sloria/TextBlob/issues.
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 121, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 640, in code_to_exec
+    exec(code, module.__dict__)
+File "/home/runner/workspace/app.py", line 118, in <module>
+    result = analyze_text(text_input)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 39, in analyze_text
+    aspect_result = perform_aspect_based_analysis(text)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/sentiment_analyzer.py", line 185, in perform_aspect_based_analysis
+    aspects = extract_aspects(text)
+              ^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/sentiment_analyzer.py", line 143, in extract_aspects
+    noun_phrases = blob.noun_phrases
+                   ^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/textblob/decorators.py", line 23, in __get__
+    value = obj.__dict__[self.func.__name__] = self.func(obj)
+                                               ^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/textblob/blob.py", line 477, in noun_phrases
+    for phrase in self.np_extractor.extract(self.raw)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/textblob/en/np_extractors.py", line 143, in extract
+    self.train()
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/textblob/decorators.py", line 37, in decorated
+    raise MissingCorpusError() from error
