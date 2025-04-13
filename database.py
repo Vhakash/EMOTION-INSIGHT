@@ -162,5 +162,21 @@ def get_sentiment_history_dataframe():
     finally:
         session.close()
 
+def delete_all_analyses():
+    """Delete all analyses from the database"""
+    session = Session()
+    
+    try:
+        count = session.query(SentimentAnalysis).count()
+        session.query(SentimentAnalysis).delete()
+        session.commit()
+        return count
+    except Exception as e:
+        session.rollback()
+        print(f"Error deleting all analyses: {str(e)}")
+        return 0
+    finally:
+        session.close()
+
 # Initialize the database when this module is imported
 init_db()
