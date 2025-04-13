@@ -4,9 +4,15 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def create_sentiment_gauge(score):
+def create_sentiment_gauge(score, key=None):
     """
     Create a gauge chart to display sentiment score
+    
+    Parameters:
+    score : float
+        The sentiment score to display
+    key : str, optional
+        A unique key for the chart element
     """
     # Define colors and thresholds
     colors = ['#FF6B6B', '#718096', '#38B2AC']  # Negative, Neutral, Positive
@@ -44,12 +50,18 @@ def create_sentiment_gauge(score):
         font=dict(color="#2D3748")
     )
     
-    # Display the chart
-    st.plotly_chart(fig, use_container_width=True)
+    # Display the chart with a unique key
+    st.plotly_chart(fig, use_container_width=True, key=f"sentiment_gauge_{key or 'main'}")
 
-def create_emotion_bar_chart(emotions):
+def create_emotion_bar_chart(emotions, key=None):
     """
     Create a horizontal bar chart for emotion analysis
+    
+    Parameters:
+    emotions : dict
+        A dictionary of emotions and their scores
+    key : str, optional
+        A unique key for the chart element
     """
     # Convert emotions dict to DataFrame
     emotion_df = pd.DataFrame({
@@ -104,12 +116,18 @@ def create_emotion_bar_chart(emotions):
         textposition='outside'
     )
     
-    # Display the chart
-    st.plotly_chart(fig, use_container_width=True)
+    # Display the chart with a unique key
+    st.plotly_chart(fig, use_container_width=True, key=f"emotion_chart_{key or 'main'}")
 
-def create_aspect_sentiment_chart(aspects):
+def create_aspect_sentiment_chart(aspects, key=None):
     """
     Create a visualization for aspect-based sentiment analysis
+    
+    Parameters:
+    aspects : list
+        A list of aspect dictionaries with 'aspect', 'sentiment', and 'score' keys
+    key : str, optional
+        A unique key for the chart element
     """
     # Convert aspects to DataFrame
     aspect_df = pd.DataFrame(aspects)
@@ -157,5 +175,5 @@ def create_aspect_sentiment_chart(aspects):
         )
     )
     
-    # Display the chart
-    st.plotly_chart(fig, use_container_width=True)
+    # Display the chart with a unique key
+    st.plotly_chart(fig, use_container_width=True, key=f"aspect_chart_{key or 'main'}")
