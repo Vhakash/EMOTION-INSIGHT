@@ -153,7 +153,7 @@ with tab1:
                 with col1:
                     # Overall sentiment
                     st.markdown("### Overall Sentiment")
-                    create_sentiment_gauge(result["sentiment"]["compound"])
+                    create_sentiment_gauge(result["sentiment"]["compound"], key="result_main")
                     st.markdown(f"**Classification**: {result['sentiment']['classification']}")
                     st.markdown(f"**Confidence**: {result['sentiment']['confidence']:.2f}")
                 
@@ -161,12 +161,12 @@ with tab1:
                     # Emotion analysis
                     if detect_emotions:
                         st.markdown("### Detected Emotions")
-                        create_emotion_bar_chart(result["emotions"])
+                        create_emotion_bar_chart(result["emotions"], key="result_emotions")
                 
                 # Aspect-based analysis
                 if analyze_aspects and result["aspects"]:
                     st.markdown("### Aspect-Based Sentiment")
-                    create_aspect_sentiment_chart(result["aspects"])
+                    create_aspect_sentiment_chart(result["aspects"], key="result_aspects")
                     
                     # Display aspects in a table
                     aspects_df = pd.DataFrame(result["aspects"])
@@ -296,19 +296,19 @@ with tab3:
                     # Handle different formats
                     if "sentiment" in selected_item:
                         # Direct analysis format
-                        create_sentiment_gauge(selected_item["sentiment"]["compound"])
+                        create_sentiment_gauge(selected_item["sentiment"]["compound"], key=f"history_{selected_entry}_sentiment")
                         st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
                         st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
                     else:
                         # Database format
-                        create_sentiment_gauge(selected_item["sentiment_score"])
+                        create_sentiment_gauge(selected_item["sentiment_score"], key=f"history_{selected_entry}_sentiment")
                         st.markdown(f"**Classification**: {selected_item['sentiment_classification']}")
                         st.markdown(f"**Confidence**: {selected_item['confidence']:.2f}")
                 
                 with col2:
                     # Emotion analysis
                     st.markdown("#### Detected Emotions")
-                    create_emotion_bar_chart(selected_item["emotions"])
+                    create_emotion_bar_chart(selected_item["emotions"], key=f"history_{selected_entry}_emotions")
             
             # Aspect-based analysis
             if selected_item["aspects"]:
