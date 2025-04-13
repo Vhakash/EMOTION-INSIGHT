@@ -361,7 +361,7 @@ with tab3:
                 yaxis_range=[-1, 1]
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="history_trend")
             
         # Add option to download full history as CSV
         if len(history_df) > 0:
@@ -481,7 +481,7 @@ with tab4:
                 title="Sentiment Distribution"
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="sentiment_distribution_pie")
         
         with col2:
             # Sentiment score histogram
@@ -499,7 +499,7 @@ with tab4:
                 xaxis_range=[-1, 1]
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="sentiment_histogram")
         
         # Emotion analysis
         if len(emotions_df) > 0:
@@ -523,7 +523,7 @@ with tab4:
                 yaxis_range=[0, 1]
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="emotion_intensity_bar")
         
         # Aspect analysis
         if len(aspects_df) > 0:
@@ -578,7 +578,7 @@ with tab4:
                 margin=dict(l=50, r=50, t=50, b=50)
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="aspect_frequency_chart")
             
             # Show aspects by sentiment
             st.subheader("Aspects by Sentiment")
@@ -609,7 +609,7 @@ with tab4:
                 yaxis_title="Count"
             )
             
-            safe_plotly_chart(fig)
+            safe_plotly_chart(fig, key="aspect_sentiment_chart")
         
         # Subjectivity Analysis
         st.subheader("Subjectivity Analysis")
@@ -635,7 +635,7 @@ with tab4:
             yaxis_range=[0, 1]
         )
         
-        safe_plotly_chart(fig)
+        safe_plotly_chart(fig, key="subjectivity_scatter")
 
 # Footer with information
 st.markdown("---")
