@@ -123,21 +123,149 @@ def process_csv(uploaded_file):
         st.error(f"Error processing CSV file: {str(e)}")
         return None
 
-# Header section
-st.title("Sentiment Analysis Dashboard")
-st.markdown("Analyze the emotional content of your text using advanced NLP techniques")
+# Custom CSS for animations and enhanced design
+st.markdown("""
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .fadeIn { animation: fadeIn 1.5s ease-out; }
+    .slideIn { animation: slideIn 1s ease-out; }
+    .pulse { animation: pulse 2s infinite; }
+    
+    .title-container {
+        background: linear-gradient(90deg, #5B61F9 0%, #38B2AC 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        color: white;
+        text-align: center;
+        animation: fadeIn 1.5s ease-out;
+    }
+    
+    .subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.2rem;
+        margin-top: 0.5rem;
+    }
+    
+    .card {
+        border-radius: 8px;
+        padding: 1.5rem;
+        background: white;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        animation: slideIn 1s ease-out;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .emoji-icon {
+        font-size: 2rem;
+        margin-right: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+    
+    .tabs-container {
+        animation: fadeIn 1.5s ease-out;
+    }
 
-# Main content area
-tab1, tab2, tab3, tab4 = st.tabs(["Text Analysis", "Batch Analysis", "History", "Analytics"])
+    .stButton button {
+        transition: all 0.3s ease;
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Make text areas larger and more readable */
+    .stTextArea textarea {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+    
+    /* Enhance dataframes */
+    .dataframe {
+        font-size: 0.9rem;
+    }
+    
+    /* Improve tab appearance */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        transition: color 0.3s ease;
+    }
+    
+    /* Footer styling */
+    .footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding: 1rem;
+        border-top: 1px solid #eee;
+        font-size: 0.9rem;
+        color: #718096;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header section with animated design
+st.markdown("""
+<div class="title-container">
+    <h1>✨ Sentiment Analysis Dashboard ✨</h1>
+    <p class="subtitle">Analyze the emotional content of your text using advanced NLP techniques</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Main content area with custom tab icons and animations
+st.markdown('<div class="tabs-container">', unsafe_allow_html=True)
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📝 Text Analysis", 
+    "📊 Batch Analysis", 
+    "📜 History", 
+    "📈 Analytics"
+])
 
 with tab1:
+    # Animated intro card with tips
+    st.markdown("""
+    <div class="card">
+        <h3><span class="emoji-icon">💡</span> How it works</h3>
+        <p>Our sentiment analysis engine examines your text to detect emotions, sentiment, and key topics. 
+        Try different types of text to see how the analysis changes!</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        # Text input section
-        st.subheader("Enter Text to Analyze")
+        # Text input section with animated card
+        st.markdown("""
+        <div class="card">
+            <h3>Enter Text to Analyze</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Sample text selection
+        # Sample text selection with enhanced UI
         sample_option = st.selectbox(
             "Try a sample text or enter your own below:",
             ["Custom text..."] + get_sample_texts()
@@ -147,19 +275,52 @@ with tab1:
             text_input = st.text_area(
                 "Enter text for analysis:",
                 height=150,
-                placeholder="Type or paste your text here for sentiment analysis..."
+                placeholder="Type or paste your text here for sentiment analysis...",
+                help="For best results, use texts with at least a few sentences to provide enough context for the analysis."
             )
         else:
             text_input = sample_option
             st.text_area("Sample text:", value=text_input, height=150, disabled=True)
     
     with col2:
-        st.subheader("Options")
-        analyze_aspects = st.checkbox("Analyze aspects/topics", value=True)
-        detect_emotions = st.checkbox("Detect emotions", value=True)
+        # Options in an animated card
+        st.markdown("""
+        <div class="card">
+            <h3><span class="emoji-icon">⚙️</span> Analysis Options</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        analyze_aspects = st.checkbox(
+            "Analyze aspects/topics", 
+            value=True,
+            help="Extract specific topics or aspects mentioned in the text and analyze sentiment for each"
+        )
+        
+        detect_emotions = st.checkbox(
+            "Detect emotions", 
+            value=True,
+            help="Identify specific emotions expressed in the text beyond positive/negative sentiment"
+        )
+        
+        # Add some extra interactive options
+        st.markdown("#### Text Complexity")
+        complexity = st.slider(
+            "Analysis Depth", 
+            min_value=1, 
+            max_value=3, 
+            value=2,
+            help="Higher depth provides more detailed analysis but may take longer"
+        )
     
-    # Analysis button
-    if st.button("Analyze Sentiment", type="primary"):
+    # Create a centered container for the button
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        # Analysis button with animation
+        st.markdown('<div style="text-align: center; padding: 10px 0;">', unsafe_allow_html=True)
+        analyze_button = st.button("✨ Analyze Sentiment ✨", type="primary", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    if analyze_button:
         if not text_input:
             st.warning("Please enter some text to analyze.")
         else:
@@ -195,11 +356,15 @@ with tab1:
                     st.dataframe(aspects_df)
 
 with tab2:
-    st.subheader("Batch Analysis from CSV")
+    # Batch Analysis with animated card
     st.markdown("""
-    Upload a CSV file with a column named 'text' containing the text to analyze.
-    Results will be available for download after processing.
-    """)
+    <div class="card">
+        <h3><span class="emoji-icon">📊</span> Batch Analysis from CSV</h3>
+        <p>Upload a CSV file with a column named <code>text</code> containing the text to analyze.
+        Results will be available for download after processing.</p>
+        <p>Perfect for analyzing customer reviews, survey responses, or social media comments in bulk!</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     
@@ -244,10 +409,24 @@ with tab2:
                     )
 
 with tab3:
-    st.subheader("Analysis History")
+    # History tab with animated card
+    st.markdown("""
+    <div class="card">
+        <h3><span class="emoji-icon">📜</span> Analysis History</h3>
+        <p>View and manage your past analyses. Select any entry to see detailed results or export your analysis history.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     if not st.session_state.history:
-        st.info("No analysis history yet. Analyze some text to see results here.")
+        # Empty state with friendly message
+        st.markdown("""
+        <div style="text-align: center; padding: 40px; background-color: #f8f9fa; border-radius: 10px; margin: 20px 0;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+            <h3>No Analysis History Yet</h3>
+            <p>After you analyze some text, your results will appear here for future reference.</p>
+            <p>Try analyzing text in the Text Analysis tab to get started!</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         # Create a dataframe from history
         history_data = []
@@ -388,10 +567,24 @@ with tab3:
                 st.rerun()
 
 with tab4:
-    st.subheader("Sentiment Analytics Dashboard")
+    # Analytics tab with animated card
+    st.markdown("""
+    <div class="card">
+        <h3><span class="emoji-icon">📈</span> Sentiment Analytics Dashboard</h3>
+        <p>Visualize sentiment patterns, emotion trends, and aspect analyses across all your analyzed texts.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     if not st.session_state.history:
-        st.info("No analysis data available. Analyze some text to view analytics.")
+        # Empty state with friendly message
+        st.markdown("""
+        <div style="text-align: center; padding: 40px; background-color: #f8f9fa; border-radius: 10px; margin: 20px 0;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+            <h3>No Analytics Data Available</h3>
+            <p>Analytics are generated from your analysis history.</p>
+            <p>Start by analyzing some text in the Text Analysis tab to populate this dashboard!</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         # Create a dataframe from history for analysis
         analytics_data = []
@@ -637,11 +830,23 @@ with tab4:
         
         safe_plotly_chart(fig, key="subjectivity_scatter")
 
-# Footer with information
-st.markdown("---")
+# Close the tabs container
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer with information and copyright
 st.markdown("""
-This dashboard uses NLP techniques to analyze sentiment and emotions in text.
-- **Sentiment Score**: Ranges from -1 (very negative) to 1 (very positive)
-- **Emotions**: Detects joy, sadness, anger, fear, surprise, and more
-- **Aspect Analysis**: Extracts topics and their associated sentiments
-""")
+<div class="footer">
+    <h3>About This Dashboard</h3>
+    <p>This dashboard uses advanced NLP techniques to analyze sentiment and emotions in text.</p>
+    <div class="card" style="margin-bottom: 20px">
+        <ul>
+            <li><strong>Sentiment Score</strong>: Ranges from -1 (very negative) to 1 (very positive)</li>
+            <li><strong>Emotions</strong>: Detects joy, sadness, anger, fear, surprise, and more</li>
+            <li><strong>Aspect Analysis</strong>: Extracts topics and their associated sentiments</li>
+            <li><strong>Subjectivity</strong>: Measures how subjective (opinion-based) the text is</li>
+        </ul>
+    </div>
+    <p class="copyright">© 2025 Sentiment Analysis Dashboard. All rights reserved.</p>
+    <p>Built with ❤️ using Python, NLTK, TextBlob, Streamlit and Plotly</p>
+</div>
+""", unsafe_allow_html=True)
