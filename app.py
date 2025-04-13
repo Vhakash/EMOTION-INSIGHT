@@ -3,6 +3,7 @@ import pandas as pd
 import time
 from datetime import datetime
 import plotly.express as px
+import plotly.graph_objects as go
 
 from sentiment_analyzer import (
     perform_basic_sentiment_analysis,
@@ -20,6 +21,7 @@ from database import (
     get_all_analyses,
     get_analysis_by_id,
     delete_analysis,
+    delete_all_analyses,
     get_sentiment_distribution,
     get_sentiment_history_dataframe
 )
