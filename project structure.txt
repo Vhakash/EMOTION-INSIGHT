@@ -1,0 +1,6 @@
+EMOTION-INSIGHT/
+├── app.py              # Main application file
+├── sentiment_analyzer.py# Core sentiment analysis logic
+├── visualization.py    # Chart creation functions
+├── database.py        # Database operations
+└── utils.py           # Helper functions
