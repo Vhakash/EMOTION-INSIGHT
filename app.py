@@ -103,155 +103,266 @@ def analyze_text(text):
 
 def process_csv(uploaded_file):
     try:
-        df = pd.read_csv(uploaded_file)
+        # Try different encoding options and error handling
+        try:
+            df = pd.read_csv(uploaded_file, encoding='utf-8', on_bad_lines='skip')
+        except:
+            try:
+                df = pd.read_csv(uploaded_file, encoding='latin1', on_bad_lines='skip')
+            except:
+                df = pd.read_csv(uploaded_file, encoding='cp1252', on_bad_lines='skip')
+        
         if 'text' not in df.columns:
             st.error("The CSV file must contain a 'text' column.")
             return None
         
+        # Clean the text column
+        df['text'] = df['text'].astype(str).apply(lambda x: x.strip())
+        df = df[df['text'].str.len() > 0]  # Remove empty rows
+        
         results = []
         progress_bar = st.progress(0)
+        total_rows = len(df)
         
         for i, row in enumerate(df.itertuples()):
-            text = getattr(row, 'text')
-            result = analyze_text(text)
-            results.append(result)
-            progress_bar.progress((i + 1) / len(df))
+            try:
+                text = getattr(row, 'text')
+                result = analyze_text(text)
+                results.append(result)
+                progress_bar.progress((i + 1) / total_rows)
+            except Exception as e:
+                st.warning(f"Skipped row {i+1} due to error: {str(e)}")
+                continue
         
+        if not results:
+            st.error("No valid entries were processed.")
+            return None
+            
         return pd.DataFrame(results)
     
     except Exception as e:
         st.error(f"Error processing CSV file: {str(e)}")
         return None
+st.markdown("""
+<div class="title-container">
+    <h1>✨ Emotion Insight Dashboard ✨</h1>
+    <p class="subtitle">Discover the emotional landscape of your text with advanced AI analysis</p>
+    <div style="margin-top: 20px;">
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😊</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😢</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😡</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😲</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😍</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# Custom CSS for animations and enhanced design
+# Create tabs
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Text Analysis 📝", 
+    "Batch Analysis 📊",
+    "History 📜",
+    "Analytics 📈"
+])
+# Add these imports for enhanced visuals
+import random
+from PIL import Image
+from io import BytesIO
+import base64
+
+# Enhanced CSS with more animations and visual effects
 st.markdown("""
 <style>
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+    /* Existing animations remain the same ... */
     
-    @keyframes slideIn {
-        from { transform: translateY(10px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-    
-    .fadeIn { animation: fadeIn 1.5s ease-out; }
-    .slideIn { animation: slideIn 1s ease-out; }
-    .pulse { animation: pulse 2s infinite; }
-    
+    /* Enhanced title container */
     .title-container {
-        background: linear-gradient(90deg, #5B61F9 0%, #38B2AC 100%);
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        color: white;
+        background: #4A90E2;  /* Solid background color */
+        padding: 3rem;
+        border-radius: 20px;
+        margin-bottom: 2.5rem;
+        color: #FFFFFF;
         text-align: center;
-        animation: fadeIn 1.5s ease-out;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        border: 4px solid #FFD700;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .title-container h1 {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+        text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+        color: #FFD700;
+        font-weight: 900;
+        letter-spacing: 3px;
+        text-transform: uppercase;
     }
     
     .subtitle {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1.2rem;
+        color: #FFFFFF;
+        font-size: 1.5rem;
+        margin-top: 1rem;
+        font-weight: 500;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    background: linear-gradient(-45deg, #FF6B6B, #4ECDC4, #45B7D1, #9B6BFF);
+    background-size: 400% 400%;
+    animation: colorShift 15s ease infinite;
+    padding: 2.5rem;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    color: #FFE5D9;  /* Changed from #E2F3FF to warm peach */
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .title-container h1 {
+        font-size: 2.8rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(90deg, #FFF200, #FFB800);  /* Brighter yellow gradient */
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+        background: linear-gradient(90deg, #7FFFD4, #00FFFF);  /* Aquamarine to cyan */
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 1.3rem;
         margin-top: 0.5rem;
+        font-weight: 300;
     }
     
+    /* Enhanced cards */
     .card {
-        border-radius: 8px;
-        padding: 1.5rem;
-        background: white;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
+        border-radius: 12px;
+        padding: 1.8rem;
+        background: linear-gradient(135deg, #2C3E50, #3498DB);
+        color: #FFE5D9;  /* Changed from #E2F3FF to warm peach */
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1.5rem;
         animation: slideIn 1s ease-out;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: all 0.4s ease;
+        border-top: 5px solid transparent;
+        border-image: linear-gradient(to right, #FF6B6B, #4ECDC4);
+        border-image-slice: 1;
     }
     
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    /* Tab styling */
+    .stTabs [data-baseweb="tab"] {
+        transition: all 0.3s ease;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 5px 10px;
+        background: linear-gradient(90deg, rgba(52, 152, 219, 0.2), rgba(41, 128, 185, 0.2));
+        color: #FFE5D9 !important;  /* Changed from #E2F3FF to warm peach */
     }
     
-    .emoji-icon {
-        font-size: 2rem;
-        margin-right: 0.5rem;
-        animation: pulse 2s infinite;
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+        color: #FFE5D9 !important;  /* Changed from #E2F3FF to warm peach */
     }
     
-    .tabs-container {
-        animation: fadeIn 1.5s ease-out;
-    }
-
+    /* Button enhancements */
     .stButton button {
         transition: all 0.3s ease;
-    }
-    
-    .stButton button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Make text areas larger and more readable */
-    .stTextArea textarea {
-        font-size: 1rem;
-        line-height: 1.5;
-    }
-    
-    /* Enhance dataframes */
-    .dataframe {
-        font-size: 0.9rem;
-    }
-    
-    /* Improve tab appearance */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        transition: color 0.3s ease;
-    }
-    
-    /* Footer styling */
-    .footer {
-        text-align: center;
-        margin-top: 3rem;
-        padding: 1rem;
-        border-top: 1px solid #eee;
-        font-size: 0.9rem;
-        color: #718096;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+        color: #FFE5D9;  /* Changed from white to warm peach */
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Header section with animated design
+# Helper function to create animated loading
+def show_animated_loading(message="Analyzing..."):
+    with st.spinner(message):
+        loading_html = f"""
+        <div class="loading-animation">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <h3 style="margin-left: 15px;">{message}</h3>
+        </div>
+        """
+        loading_placeholder = st.empty()
+        loading_placeholder.markdown(loading_html, unsafe_allow_html=True)
+        return loading_placeholder
+
+# Helper function to create tooltip
+def tooltip(text, tooltip_text):
+    return f"""
+    <div class="tooltip">{text}
+        <span class="tooltiptext">{tooltip_text}</span>
+    </div>
+    """
+
+# Helper function to create sentiment badge
+def sentiment_badge(sentiment):
+    colors = {
+        "Positive": "#38B2AC",
+        "Negative": "#FF6B6B",
+        "Neutral": "#718096"
+    }
+    icons = {
+        "Positive": "😊",
+        "Negative": "😞",
+        "Neutral": "😐"
+    }
+    color = colors.get(sentiment, "#718096")
+    icon = icons.get(sentiment, "❓")
+    
+    return f"""
+    <div style="display: inline-block; padding: 5px 12px; background-color: {color}; 
+                color: white; border-radius: 20px; font-weight: bold; margin: 5px 0;">
+        {icon} {sentiment}
+    </div>
+    """
+
+# Enhanced header with animated background
 st.markdown("""
 <div class="title-container">
-    <h1>✨ Sentiment Analysis Dashboard ✨</h1>
-    <p class="subtitle">Analyze the emotional content of your text using advanced NLP techniques</p>
+    <h1>✨ Emotion Insight Dashboard ✨</h1>
+    <p class="subtitle">Discover the emotional landscape of your text with advanced AI analysis</p>
+    <div style="margin-top: 20px;">
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😊</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😢</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😡</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😲</span>
+        <span style="font-size: 2rem; margin: 0 10px;" class="float">😍</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Main content area with custom tab icons and animations
-st.markdown('<div class="tabs-container">', unsafe_allow_html=True)
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📝 Text Analysis", 
-    "📊 Batch Analysis", 
-    "📜 History", 
-    "📈 Analytics"
-])
+# ... existing tab creation code ...
 
 with tab1:
-    # Animated intro card with tips
+    # Enhanced intro card with interactive elements
     st.markdown("""
     <div class="card">
         <h3><span class="emoji-icon">💡</span> How it works</h3>
-        <p>Our sentiment analysis engine examines your text to detect emotions, sentiment, and key topics. 
-        Try different types of text to see how the analysis changes!</p>
+        <p>Our AI-powered sentiment analysis engine examines your text to detect emotions, sentiment, and key topics.
+        The analysis uses advanced natural language processing to understand context and nuance.</p>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px; text-align: center;">
+            <div>
+                <div style="font-size: 2rem; margin-bottom: 10px;">📝</div>
+                <p><strong>Input Text</strong></p>
+            </div>
+            <div style="font-size: 1.5rem; margin-top: 15px;">➡️</div>
+            <div>
+                <div style="font-size: 2rem; margin-bottom: 10px;">🧠</div>
+                <p><strong>AI Analysis</strong></p>
+            </div>
+            <div style="font-size: 1.5rem; margin-top: 15px;">➡️</div>
+            <div>
+                <div style="font-size: 2rem; margin-bottom: 10px;">📊</div>
+                <p><strong>Insights</strong></p>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -345,6 +456,14 @@ with tab1:
                     if detect_emotions:
                         st.markdown("### Detected Emotions")
                         create_emotion_bar_chart(result["emotions"], key="result_emotions")
+                        
+                        # Get dominant emotion
+                        dominant_emotion = max(result["emotions"].items(), key=lambda x: x[1])
+                        st.markdown(f"""
+                        <div style="text-align: center; margin-top: 10px;">
+                            <p>Dominant emotion: <strong>{dominant_emotion[0]}</strong> ({dominant_emotion[1]:.2f})</p>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 # Aspect-based analysis
                 if analyze_aspects and result["aspects"]:
@@ -671,7 +790,45 @@ with tab4:
                     "Neutral": "#718096",
                     "Negative": "#FF6B6B"
                 },
-                title="Sentiment Distribution"
+                title="Sentiment Distribution",
+                hole=0.4,  # Creates a donut chart effect
+            )
+            
+            # Enhance the chart with 3D effects and interactivity
+            fig.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                hovertemplate="<b>%{label}</b><br>" +
+                              "Count: %{value}<br>" +
+                              "Percentage: %{percent:.1%}<extra></extra>",
+                pull=[0.1, 0.1, 0.1],  # Pulls slices slightly apart
+                marker=dict(
+                    line=dict(color='#000000', width=2)
+                ),
+            )
+            
+            fig.update_layout(
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                title_x=0.5,
+                title_font_size=20,
+                uniformtext_minsize=12,
+                uniformtext_mode='hide',
+                annotations=[
+                    dict(
+                        text='Sentiment<br>Analysis',
+                        x=0.5,
+                        y=0.5,
+                        font_size=14,
+                        showarrow=False
+                    )
+                ]
             )
             
             safe_plotly_chart(fig, key="sentiment_distribution_pie")
