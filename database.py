@@ -6,8 +6,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
-# Get database connection string from environment variable
-DATABASE_URL = os.environ.get('DATABASE_URL')
+# Set up database URL - using SQLite for local development
+DATABASE_URL = "sqlite:///sentiment_analysis.db"
 
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
