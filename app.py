@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
+import nltk
 
 from sentiment_analyzer import (
     perform_basic_sentiment_analysis,
@@ -25,6 +26,8 @@ from database import (
     get_sentiment_distribution,
     get_sentiment_history_dataframe
 )
+
+nltk.download('vader_lexicon')
 
 # Helper function for Plotly charts to prevent duplicate keys
 def safe_plotly_chart(fig, container_width=True, key=None):
@@ -89,15 +92,21 @@ def analyze_text(text):
         "aspects": aspect_result
     }
     
-    # Save to database
+    # Save to database and update history
     try:
-        analysis_id = save_analysis(analysis_result)
-        # If successful, reload all analyses from the database
-        st.session_state.history = get_all_analyses()
+        # save_analysis now returns the full dict
+        saved_analysis_dict = save_analysis(analysis_result)
+        if saved_analysis_dict:
+            # Prepend to history so it appears at the top of the list
+            st.session_state.history.insert(0, saved_analysis_dict)
+        else:
+            # Fallback for DB error, use the transient result
+            st.error("Failed to save analysis to the database.")
+            st.session_state.history.insert(0, analysis_result)
     except Exception as e:
-        st.error(f"Error saving to database: {str(e)}")
+        st.error(f"An unexpected error occurred while saving to the database: {e}")
         # Add to session state history as fallback
-        st.session_state.history.append(analysis_result)
+        st.session_state.history.insert(0, analysis_result)
     
     return analysis_result
 

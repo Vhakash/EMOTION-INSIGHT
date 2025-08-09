@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text, DateTime, MetaData, Table
 from sqlalchemy.ext.declarative import declarative_base
+from contextlib import contextmanager
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
