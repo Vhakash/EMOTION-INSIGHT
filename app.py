@@ -4,7 +4,6 @@ import time
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
-import nltk
 
 from sentiment_analyzer import (
     perform_basic_sentiment_analysis,
@@ -26,8 +25,6 @@ from database import (
     get_sentiment_distribution,
     get_sentiment_history_dataframe
 )
-
-nltk.download('vader_lexicon')
 
 # Helper function for Plotly charts to prevent duplicate keys
 def safe_plotly_chart(fig, container_width=True, key=None):
@@ -92,21 +89,15 @@ def analyze_text(text):
         "aspects": aspect_result
     }
     
-    # Save to database and update history
+    # Save to database
     try:
-        # save_analysis now returns the full dict
-        saved_analysis_dict = save_analysis(analysis_result)
-        if saved_analysis_dict:
-            # Prepend to history so it appears at the top of the list
-            st.session_state.history.insert(0, saved_analysis_dict)
-        else:
-            # Fallback for DB error, use the transient result
-            st.error("Failed to save analysis to the database.")
-            st.session_state.history.insert(0, analysis_result)
+        analysis_id = save_analysis(analysis_result)
+        # If successful, reload all analyses from the database
+        st.session_state.history = get_all_analyses()
     except Exception as e:
-        st.error(f"An unexpected error occurred while saving to the database: {e}")
+        st.error(f"Error saving to database: {str(e)}")
         # Add to session state history as fallback
-        st.session_state.history.insert(0, analysis_result)
+        st.session_state.history.append(analysis_result)
     
     return analysis_result
 
@@ -170,7 +161,7 @@ st.markdown("""
 tab1, tab2, tab3, tab4 = st.tabs([
     "Text Analysis 📝", 
     "Batch Analysis 📊",
-    "History 📜",
+    "History �",
     "Analytics 📈"
 ])
 # Add these imports for enhanced visuals
@@ -558,7 +549,7 @@ with tab3:
     else:
         # Create a dataframe from history
         history_data = []
-        for i, item in enumerate(st.session_state.history):
+        for item in st.session_state.history:
             # Handle different data formats (database vs direct analysis)
             if "sentiment" in item:
                 # Direct analysis format
@@ -570,7 +561,7 @@ with tab3:
                 score = item["sentiment_score"]
                 
             history_data.append({
-                "ID": item.get("id", i),
+                "ID": item.get("id"),
                 "Timestamp": item["timestamp"],
                 "Text": item["text"][:50] + "..." if len(item["text"]) > 50 else item["text"],
                 "Sentiment": sentiment,
@@ -583,21 +574,23 @@ with tab3:
         col1, col2 = st.columns([3, 1])
         
         with col1:
-            selected_entry = st.selectbox("Select an entry to view details:", 
-                                          range(len(history_df)), 
-                                          format_func=lambda i: f"{history_df.iloc[i]['Timestamp']} - {history_df.iloc[i]['Text']}")
+            # Create a dictionary to map IDs to display text for the format_func
+            id_to_display = {row['ID']: f"{row['Timestamp']} - {row['Text']}" for index, row in history_df.iterrows()}
+            
+            selected_id = st.selectbox("Select an entry to view details:", 
+                                          options=history_df['ID'],
+                                          format_func=lambda id: id_to_display[id])
         
         with col2:
             if st.button("Delete Selected Entry", key="delete_entry"):
                 try:
-                    entry_id = history_df.iloc[selected_entry]["ID"]
-                    if delete_analysis(entry_id):
-                        st.success(f"Successfully deleted analysis #{entry_id}")
-                        # Reload history from database
+                    if delete_analysis(selected_id):
+                        st.success(f"Successfully deleted analysis #{selected_id}")
+                        # Reload history from database and rerun the script
                         st.session_state.history = get_all_analyses()
                         st.rerun()
                     else:
-                        st.warning(f"Entry #{entry_id} not found in database.")
+                        st.warning(f"Entry #{selected_id} not found in database.")
                 except Exception as e:
                     st.error(f"Error deleting entry: {str(e)}")
         
@@ -606,48 +599,50 @@ with tab3:
         
         # Show details of selected entry
         if st.session_state.history:
-            selected_item = st.session_state.history[selected_entry]
+            # Find the selected item from session_state using the selected_id
+            selected_item = next((item for item in st.session_state.history if item.get("id") == selected_id), None)
             
-            st.subheader(f"Details for Analysis from {selected_item['timestamp']}")
-            
-            # Display text
-            st.markdown("### Text")
-            st.text_area("Analyzed Text", value=selected_item["text"], height=100, disabled=True)
-            
-            # Create expandable sections for results
-            with st.expander("Sentiment Analysis Results", expanded=True):
-                # Create columns for displaying detailed results
-                col1, col2 = st.columns(2)
+            if selected_item:
+                st.subheader(f"Details for Analysis from {selected_item['timestamp']}")
                 
-                with col1:
-                    # Overall sentiment
-                    st.markdown("#### Overall Sentiment")
-                    # Handle different formats
-                    if "sentiment" in selected_item:
-                        # Direct analysis format
-                        create_sentiment_gauge(selected_item["sentiment"]["compound"], key=f"history_{selected_entry}_sentiment")
-                        st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
-                        st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
-                    else:
-                        # Database format
-                        create_sentiment_gauge(selected_item["sentiment_score"], key=f"history_{selected_entry}_sentiment")
-                        st.markdown(f"**Classification**: {selected_item['sentiment_classification']}")
-                        st.markdown(f"**Confidence**: {selected_item['confidence']:.2f}")
+                # Display text
+                st.markdown("### Text")
+                st.text_area("Analyzed Text", value=selected_item["text"], height=100, disabled=True)
                 
-                with col2:
-                    # Emotion analysis
-                    st.markdown("#### Detected Emotions")
-                    create_emotion_bar_chart(selected_item["emotions"], key=f"history_{selected_entry}_emotions")
-            
-            # Aspect-based analysis
-            if selected_item["aspects"]:
-                with st.expander("Aspect-Based Analysis", expanded=True):
-                    st.markdown("#### Aspect-Based Sentiment")
-                    create_aspect_sentiment_chart(selected_item["aspects"], key=f"history_{selected_entry}_aspects")
+                # Create expandable sections for results
+                with st.expander("Sentiment Analysis Results", expanded=True):
+                    # Create columns for displaying detailed results
+                    col1, col2 = st.columns(2)
                     
-                    # Display aspects in a table
-                    aspects_df = pd.DataFrame(selected_item["aspects"])
-                    st.dataframe(aspects_df)
+                    with col1:
+                        # Overall sentiment
+                        st.markdown("#### Overall Sentiment")
+                        # Handle different formats
+                        if "sentiment" in selected_item:
+                            # Direct analysis format
+                            create_sentiment_gauge(selected_item["sentiment"]["compound"], key=f"history_{selected_id}_sentiment")
+                            st.markdown(f"**Classification**: {selected_item['sentiment']['classification']}")
+                            st.markdown(f"**Confidence**: {selected_item['sentiment']['confidence']:.2f}")
+                        else:
+                            # Database format
+                            create_sentiment_gauge(selected_item["sentiment_score"], key=f"history_{selected_id}_sentiment")
+                            st.markdown(f"**Classification**: {selected_item['sentiment_classification']}")
+                            st.markdown(f"**Confidence**: {selected_item['confidence']:.2f}")
+                    
+                    with col2:
+                        # Emotion analysis
+                        st.markdown("#### Detected Emotions")
+                        create_emotion_bar_chart(selected_item["emotions"], key=f"history_{selected_id}_emotions")
+                
+                # Aspect-based analysis
+                if selected_item["aspects"]:
+                    with st.expander("Aspect-Based Analysis", expanded=True):
+                        st.markdown("#### Aspect-Based Sentiment")
+                        create_aspect_sentiment_chart(selected_item["aspects"], key=f"history_{selected_id}_aspects")
+                        
+                        # Display aspects in a table
+                        aspects_df = pd.DataFrame(selected_item["aspects"])
+                        st.dataframe(aspects_df)
         
         # Visualization of history trend
         if len(history_df) > 1:
