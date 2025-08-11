@@ -4,3 +4,4 @@ plotly
 nltk
 textblob
 sqlalchemy
+streamlit-google-auth
